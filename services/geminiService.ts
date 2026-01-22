@@ -9,10 +9,17 @@ code: The code content.
 
 MODE 1: PYTHON REQUESTS
 If the user specifically asks for "Python", "script", "math calculation", "numpy", or "data processing":
-- Generate PURE PYTHON code.
+- Generate PURE PYTHON code compatible with Pyodide (WASM).
 - Do NOT use markdown code blocks.
-- Ensure the code prints output to stdout so it is visible.
-
+- VISUALIZATION & UI:
+  - You CANNOT use \`tkinter\`, \`pygame\`, or blocking \`time.sleep\`.
+  - You MUST use \`from js import document, window, Math\` to interact with the page.
+  - TARGET: Render all graphics, plots, and UI controls into the div with ID "plot-root".
+  - INITIALIZATION: Always start by clearing the target: \`document.getElementById("plot-root").innerHTML = ""\`.
+  - ANIMATION: Use \`window.requestAnimationFrame\` with a Python callback (wrapped in \`pyodide.ffi.create_proxy\`) for smooth real-time simulations.
+  - INTERACTIVITY: Create standard HTML inputs (sliders, buttons) using \`document.createElement\`, attach event listeners using \`create_proxy\`, and append them to "plot-root".
+  - PLOTTING: For static plots, use \`matplotlib.pyplot\`.
+  
 MODE 2: REACT / 3D / COMPONENT REQUESTS
 If the user asks for a "React Component", "Visualizer", "Three.js", "React Three Fiber", or "R3F":
 - You MUST generate a self-contained HTML file that runs the React code immediately using Babel Standalone.
@@ -89,6 +96,8 @@ CRITICAL:
 - If using real-world data from search, integrate it directly into the generated code.
 `;
 
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const generateUI = async (prompt: string, files: UploadedFile[] = [], previousCode?: string): Promise<GeneratedUI> => {
   if (!process.env.API_KEY) {
     throw new Error("API Key is missing. Please check your environment configuration.");
@@ -123,57 +132,87 @@ export const generateUI = async (prompt: string, files: UploadedFile[] = [], pre
 
     parts.push({ text: promptText });
 
-    const response = await ai.models.generateContent({
-      model: model,
-      contents: {
-        role: 'user',
-        parts: parts
-      },
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        tools: [{googleSearch: {}}],
-        // responseMimeType: 'application/json' // Disabled to allow googleSearch tool usage
-      }
-    });
+    // Retry Logic
+    let lastError: any = null;
+    const maxRetries = 3;
 
-    let responseText = response.text;
-    
-    if (!responseText) {
-      throw new Error("No response received from the model.");
-    }
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model: model,
+          contents: {
+            role: 'user',
+            parts: parts
+          },
+          config: {
+            systemInstruction: SYSTEM_INSTRUCTION,
+            tools: [{googleSearch: {}}],
+            // responseMimeType: 'application/json' // Disabled to allow googleSearch tool usage
+          }
+        });
 
-    // Clean Markdown wrapper if present (often happens even if not requested)
-    if (responseText.includes("```json")) {
-      responseText = responseText.split("```json")[1].split("```")[0];
-    } else if (responseText.includes("```")) {
-      responseText = responseText.split("```")[1].split("```")[0];
-    }
-
-    let parsed;
-    try {
-        parsed = JSON.parse(responseText.trim());
-    } catch (e) {
-        console.error("JSON Parsing failed", e, responseText);
-        throw new Error("Failed to parse JSON response from Gemini. The model might have returned unstructured text.");
-    }
-    
-    // Extract grounding chunks if available
-    const sourcesMap = new Map<string, string>();
-    if (response.candidates?.[0]?.groundingMetadata?.groundingChunks) {
-      response.candidates[0].groundingMetadata.groundingChunks.forEach((chunk: any) => {
-        if (chunk.web?.uri && chunk.web?.title) {
-          sourcesMap.set(chunk.web.uri, chunk.web.title);
+        let responseText = response.text;
+        
+        if (!responseText) {
+          throw new Error("No response received from the model.");
         }
-      });
+
+        // Clean Markdown wrapper if present
+        if (responseText.includes("```json")) {
+          responseText = responseText.split("```json")[1].split("```")[0];
+        } else if (responseText.includes("```")) {
+          responseText = responseText.split("```")[1].split("```")[0];
+        }
+
+        let parsed;
+        try {
+            parsed = JSON.parse(responseText.trim());
+        } catch (e) {
+            console.error("JSON Parsing failed", e, responseText);
+            throw new Error("Failed to parse JSON response from Gemini. The model might have returned unstructured text.");
+        }
+        
+        // Extract grounding chunks if available
+        const sourcesMap = new Map<string, string>();
+        if (response.candidates?.[0]?.groundingMetadata?.groundingChunks) {
+          response.candidates[0].groundingMetadata.groundingChunks.forEach((chunk: any) => {
+            if (chunk.web?.uri && chunk.web?.title) {
+              sourcesMap.set(chunk.web.uri, chunk.web.title);
+            }
+          });
+        }
+
+        const sources = Array.from(sourcesMap.entries()).map(([uri, title]) => ({ uri, title }));
+
+        return {
+          explanation: parsed.explanation || "Generated UI",
+          code: parsed.code || "// No code generated",
+          sources: sources.length > 0 ? sources : undefined
+        };
+
+      } catch (error: any) {
+        lastError = error;
+        
+        // Check for Rate Limit (429) or Service Overload (503)
+        const isRateLimit = error.message?.includes("429") || 
+                           error.message?.includes("quota") || 
+                           error.message?.includes("503");
+
+        if (isRateLimit && attempt < maxRetries) {
+          const delayMs = Math.pow(2, attempt + 1) * 1000 + Math.random() * 500; // Exponential backoff + jitter
+          console.warn(`Rate limit hit. Retrying in ${Math.round(delayMs)}ms...`);
+          await wait(delayMs);
+          continue;
+        }
+        
+        // If not retrying, break loop to throw error
+        break;
+      }
     }
 
-    const sources = Array.from(sourcesMap.entries()).map(([uri, title]) => ({ uri, title }));
-
-    return {
-      explanation: parsed.explanation || "Generated UI",
-      code: parsed.code || "// No code generated",
-      sources: sources.length > 0 ? sources : undefined
-    };
+    // If loop finishes without return, throw the last error
+    console.error("Gemini Generation Error:", lastError);
+    throw new Error(lastError?.message || "Failed to generate UI");
 
   } catch (error: any) {
     console.error("Gemini Generation Error:", error);

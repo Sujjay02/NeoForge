@@ -25,13 +25,14 @@ export const PythonRunner: React.FC<PythonRunnerProps> = ({ code }) => {
   
   const pyodideRef = useRef<any>(null);
   const outputEndRef = useRef<HTMLDivElement>(null);
+  const plotRootRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom of terminal on output
   useEffect(() => {
     outputEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [output]);
 
-  // Load Pyodide and Numpy
+  // Load Pyodide and Packages
   useEffect(() => {
     const loadEngine = async () => {
       try {
@@ -51,7 +52,7 @@ export const PythonRunner: React.FC<PythonRunnerProps> = ({ code }) => {
             indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/",
           });
           
-          await pyodide.loadPackage("numpy");
+          await pyodide.loadPackage(["numpy", "matplotlib"]);
           pyodideRef.current = pyodide;
         }
         
@@ -83,6 +84,11 @@ export const PythonRunner: React.FC<PythonRunnerProps> = ({ code }) => {
 
     setIsRunning(true);
     setOutput([]); // Clear previous output
+    
+    // Clear Plot Root
+    if (plotRootRef.current) {
+        plotRootRef.current.innerHTML = '';
+    }
 
     try {
       const pyodide = pyodideRef.current;
@@ -150,7 +156,7 @@ export const PythonRunner: React.FC<PythonRunnerProps> = ({ code }) => {
           )}
           {pyodideReady && !isLoadingPyodide && (
             <span className="text-xs text-green-500 ml-2 flex items-center">
-              ● Ready (NumPy Loaded)
+              ● Ready (NumPy + Matplotlib)
             </span>
           )}
         </div>
@@ -230,12 +236,31 @@ export const PythonRunner: React.FC<PythonRunnerProps> = ({ code }) => {
         </div>
       </div>
 
-      {/* Code Readout */}
       <div className="flex-1 flex flex-col min-h-0">
-        <div className="p-4 overflow-y-auto font-mono">
+        {/* Output/Visualization Area */}
+        <div className="flex-[3] bg-[#2d2d2d] border-b border-[#333] resize-y overflow-auto relative min-h-[200px]">
+           <div 
+             id="plot-root" 
+             ref={plotRootRef}
+             className="w-full h-full flex flex-col items-center justify-center p-4"
+           ></div>
+           
+           {/* Placeholder text if empty */}
+           {!isRunning && (!plotRootRef.current || plotRootRef.current.childElementCount === 0) && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+                <div className="text-center">
+                    <div className="text-4xl font-bold text-zinc-500 mb-2">Visual Output</div>
+                    <div className="text-sm text-zinc-600">Graphics, plots, and UI controls appear here</div>
+                </div>
+              </div>
+           )}
+        </div>
+
+        {/* Terminal Text Output */}
+        <div className="flex-1 p-4 overflow-y-auto font-mono bg-[#1e1e1e]">
             {output.length === 0 && !isRunning && (
-                <div className="text-zinc-600 italic mt-4 text-center">
-                    Click "Run" to execute the script above.
+                <div className="text-zinc-600 italic mt-2">
+                    Console output...
                 </div>
             )}
             
