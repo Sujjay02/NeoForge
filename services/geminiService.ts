@@ -22,7 +22,7 @@ If the user specifically asks for "Python", "script", "math calculation", "numpy
   - PLOTTING: For static plots, use \`matplotlib.pyplot\`.
   
 MODE 2: REACT / 3D / COMPONENT REQUESTS
-If the user asks for a "React Component", "Visualizer", "Three.js", "React Three Fiber", or "R3F":
+If the user asks for a "React Component", "Visualizer", "Three.js", "React Three Fiber", "R3F", "3D", "WebGL", or "Shader":
 - You MUST generate a self-contained HTML file that runs the React code immediately using Babel Standalone.
 - Use the exact template structure below (adjusting imports as needed, but keeping the setup):
 
@@ -89,12 +89,15 @@ For all other requests (landing pages, forms, dashboards):
 
 VISION INSTRUCTIONS:
 - Analyze images for UI structure or data patterns.
-- If data is detected and Python is not requested, generate a UI that visualizes that data.
+- If a wireframe is provided, strictly follow its layout.
+- If a data screenshot is provided, extract the data and generate a UI that visualizes that data.
+- If the user provides a design, replicate it pixel-perfectly using Tailwind CSS.
 
 CRITICAL:
 - Return ONLY valid JSON.
 - Do NOT add conversational text before or after the JSON.
 - If using real-world data from search, integrate it directly into the generated code.
+- CUSTOM UI INSTRUCTIONS: If the generated UI is custom, complex, or a unique tool, you MUST include a visible "Help", "Instructions" section, or tooltip within the generated code to explain its functionality to the user.
 `;
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -106,8 +109,8 @@ export const generateUI = async (prompt: string, files: UploadedFile[] = [], pre
 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-  // 'gemini-3-flash-preview' supports multimodal inputs and tools
-  const model = 'gemini-3-flash-preview';
+  // Use gemini-3-pro-preview as requested for high-quality image analysis and reasoning
+  const model = 'gemini-3-pro-preview';
 
   try {
     const parts: any[] = [];
@@ -128,7 +131,7 @@ export const generateUI = async (prompt: string, files: UploadedFile[] = [], pre
     if (previousCode) {
       promptText = `Here is the current code you generated previously:\n\n${previousCode}\n\nUPDATE INSTRUCTION: ${promptText || "Improve this based on the context."}\n\nApply these changes. Return the full, updated code.`;
     } else if (!promptText && files.length > 0) {
-      promptText = "Analyze this file/image and generate a UI based on it. If it looks like a dashboard, create a dashboard. If it looks like a form, create a form.";
+      promptText = "Analyze this file/image and generate a UI based on it. If it looks like a dashboard, create a dashboard. If it looks like a form, create a form. Ensure you explain how to use the UI if it's complex.";
     }
 
     parts.push({ text: promptText });
