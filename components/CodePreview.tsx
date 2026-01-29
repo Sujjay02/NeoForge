@@ -7,7 +7,7 @@ export const CodePreview: React.FC<CodePreviewProps> = ({ html }) => {
       title="UI Preview"
       srcDoc={html}
       className="w-full h-full border-none bg-white"
-      sandbox="allow-scripts"
+      sandbox="allow-scripts allow-same-origin"
     />
   );
 };

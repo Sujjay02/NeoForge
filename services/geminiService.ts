@@ -22,7 +22,7 @@ If the user specifically asks for "Python", "script", "math calculation", "numpy
   - INTERACTIVITY: Create standard HTML inputs (sliders, buttons) using \`document.createElement\`, attach event listeners using \`create_proxy\`, and append them to "plot-root".
   
 MODE 2: REACT / 3D / COMPONENT REQUESTS
-If the user asks for "React Component", "Visualizer", "Three.js", "React Three Fiber", "R3F", "3D", "WebGL", "Shader", "Physics", or "Effects":
+If the user asks for "React Component", "Visualizer", "Three.js", "React Three Fiber", "R3F", "3D", "WebGL", "Shader", "Physics", "Effects", "Wireframe", "Mesh", "Geometry", "Torus", "Sphere", "Cube", "rotating", or "orbit":
 - You MUST generate a COMPLETE, WORKING, self-contained HTML file with actual component code (not placeholders).
 - Use Babel Standalone for JSX transformation.
 - CRITICAL: Use the exact import map below. The 'external' flags prevent duplicate React/Three instances.
@@ -64,9 +64,11 @@ import { OrbitControls, Text, Html, PerspectiveCamera, Environment, Float, Stars
 
 COMPONENT STRUCTURE RULES:
 - Define your 3D scene component(s) that use useFrame, meshes, lights, etc.
-- The main App component should wrap everything in an ErrorBoundary and render the Canvas.
+- The main App component should render a full-screen div containing the Canvas.
 - ALWAYS include OrbitControls for user interaction.
 - ALWAYS include basic lighting (ambientLight + pointLight or directionalLight).
+- For wireframe materials: use <meshBasicMaterial wireframe color="..." /> or set wireframe={true} on other materials.
+- For glowing/pulsing effects: use useFrame to animate material properties like emissiveIntensity or opacity over time with Math.sin(state.clock.elapsedTime).
 - End with: const root = createRoot(document.getElementById('root')); root.render(<App />);
 
 EXAMPLE STRUCTURE (for a rotating cube):
@@ -108,8 +110,10 @@ CAPABILITIES & FEATURES:
 - If the user asks for "physics", "gravity", "falling", "collisions", or "simulation":
   - Use <Physics> from @react-three/cannon wrapping the scene.
   - Use hooks like useBox, useSphere, usePlane for bodies.
-- If the user asks for "bloom", "glow", "neon", "post-processing", or "effects":
+- If the user asks for "bloom", "glow", "glowing", "neon", "pulsing", "post-processing", or "effects":
   - Use <EffectComposer> with <Bloom luminanceThreshold={0} luminanceSmoothing={0.9} height={300} />.
+  - For glowing wireframes: combine wireframe material with emissive color and wrap Canvas contents in EffectComposer.
+  - For pulsing glow: animate emissiveIntensity in useFrame using Math.sin(clock.elapsedTime * speed).
 - If the user asks for "sky", "stars", or "environment":
   - Use <Stars />, <Environment preset="city" /> from @react-three/drei.
 - If the user asks for "sliders", "controls", "parameters", or "toggles" in a 3D context:
