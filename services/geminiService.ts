@@ -23,125 +23,86 @@ If the user specifically asks for "Python", "script", "math calculation", "numpy
   
 MODE 2: REACT / 3D / COMPONENT REQUESTS
 If the user asks for "React Component", "Visualizer", "Three.js", "React Three Fiber", "R3F", "3D", "WebGL", "Shader", "Physics", or "Effects":
-- You MUST generate a self-contained HTML file that runs the React code immediately using Babel Standalone.
-- Use the exact template structure below.
-- CRITICAL: The import map uses 'external' flags to prevent duplicate React/Three instances. Do NOT change the import map versions unless necessary.
+- You MUST generate a COMPLETE, WORKING, self-contained HTML file with actual component code (not placeholders).
+- Use Babel Standalone for JSX transformation.
+- CRITICAL: Use the exact import map below. The 'external' flags prevent duplicate React/Three instances.
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "react-dom": "https://esm.sh/react-dom@18.2.0?external=react",
-        "three": "https://esm.sh/three@0.160.0",
-        "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.15.12?external=react,react-dom,three",
-        "@react-three/drei": "https://esm.sh/@react-three/drei@9.96.1?external=react,react-dom,three,@react-three/fiber",
-        "@react-three/cannon": "https://esm.sh/@react-three/cannon@6.6.0?external=react,react-dom,three,@react-three/fiber",
-        "@react-three/postprocessing": "https://esm.sh/@react-three/postprocessing@2.16.0?external=react,react-dom,three,@react-three/fiber",
-        "postprocessing": "https://esm.sh/postprocessing@6.34.1?external=three",
-        "leva": "https://esm.sh/leva@0.9.35?external=react,react-dom",
-        "lucide-react": "https://esm.sh/lucide-react@0.263.1?external=react,react-dom",
-        "uuid": "https://esm.sh/uuid@9.0.1"
-      }
-    }
-  </script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>
-    body { margin: 0; overflow: hidden; background-color: #000; color: white; }
-    #root { width: 100vw; height: 100vh; }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="text/babel" data-type="module">
-    import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
-    import { createRoot } from 'react-dom/client';
-    import * as THREE from 'three';
-    import { Canvas, useFrame, useThree, extend } from '@react-three/fiber';
-    import { OrbitControls, Text, Html, PerspectiveCamera, Environment, Float, Stars, Trail, Sparkles } from '@react-three/drei';
-    import { Physics, useBox, usePlane, useSphere } from '@react-three/cannon';
-    import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
-    import { useControls } from 'leva';
-    import { ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+REQUIRED HTML STRUCTURE:
+1. Head section with: Tailwind CSS, import map (copy exactly), Babel standalone, and styles
+2. Body with: <div id="root"></div> and a <script type="text/babel" data-type="module">
+3. Inside the script: imports, your ACTUAL component code, App wrapper, and ReactDOM render
 
-    // Error Boundary Component
-    class ErrorBoundary extends React.Component {
-      constructor(props) {
-        super(props);
-        this.state = { hasError: false, error: null };
-      }
-      static getDerivedStateFromError(error) {
-        return { hasError: true, error };
-      }
-      render() {
-        if (this.state.hasError) {
-          return (
-            <div className="flex flex-col items-center justify-center h-full bg-red-900/20 text-red-200 p-4 font-mono text-sm text-center">
-              <AlertCircle className="w-8 h-8 mb-2 opacity-50" />
-              <p className="font-bold">Rendering Error</p>
-              <p className="opacity-75">{this.state.error.message}</p>
-            </div>
-          );
-        }
-        return this.props.children;
-      }
-    }
+IMPORT MAP (copy exactly):
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react-dom": "https://esm.sh/react-dom@18.2.0?external=react",
+    "three": "https://esm.sh/three@0.160.0",
+    "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.15.12?external=react,react-dom,three",
+    "@react-three/drei": "https://esm.sh/@react-three/drei@9.96.1?external=react,react-dom,three,@react-three/fiber",
+    "@react-three/cannon": "https://esm.sh/@react-three/cannon@6.6.0?external=react,react-dom,three,@react-three/fiber",
+    "@react-three/postprocessing": "https://esm.sh/@react-three/postprocessing@2.16.0?external=react,react-dom,three,@react-three/fiber",
+    "postprocessing": "https://esm.sh/postprocessing@6.34.1?external=three",
+    "leva": "https://esm.sh/leva@0.9.35?external=react,react-dom",
+    "lucide-react": "https://esm.sh/lucide-react@0.263.1?external=react,react-dom",
+    "uuid": "https://esm.sh/uuid@9.0.1"
+  }
+}
+</script>
 
-    // --- GENERATED COMPONENT START ---
-    // (Insert your component here.)
-    
-    // --- APP WRAPPER ---
-    // AI NOTE: You must decide if your component needs to be wrapped in a <Canvas> or if it includes one.
-    const App = () => {
-      return (
-        <ErrorBoundary>
-          <div className="w-full h-full bg-black relative">
-             {/* 
-               SCENARIO A: If your generated component returns meshes/lights (needs context), wrap it:
-               <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
-                  <color attach="background" args={['#101010']} />
-                  <Suspense fallback={null}>
-                    <YourComponent />
-                    <Environment preset="city" />
-                  </Suspense>
-                  <OrbitControls makeDefault />
-                  <ambientLight intensity={0.5} />
-                  <pointLight position={[10, 10, 10]} intensity={1} />
-               </Canvas>
+REQUIRED IMPORTS (at top of script):
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import { createRoot } from 'react-dom/client';
+import * as THREE from 'three';
+import { Canvas, useFrame, useThree, extend } from '@react-three/fiber';
+import { OrbitControls, Text, Html, PerspectiveCamera, Environment, Float, Stars, Trail, Sparkles } from '@react-three/drei';
+// Add physics imports only if needed: import { Physics, useBox, usePlane, useSphere } from '@react-three/cannon';
+// Add effects imports only if needed: import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
+// Add leva imports only if needed: import { useControls } from 'leva';
 
-               SCENARIO B: If your generated component ALREADY has a <Canvas> (e.g. returns <Canvas>...</Canvas>), just render it:
-               <YourComponent />
-             */}
-             
-             {/* REPLACE THIS WITH YOUR LOGIC BASED ON THE COMPONENT YOU WROTE */}
-             <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
-                <color attach="background" args={['#101010']} />
-                <Suspense fallback={null}>
-                  <group>
-                     {/* <YourComponent /> */}
-                  </group>
-                </Suspense>
-                <OrbitControls makeDefault />
-                <ambientLight intensity={0.5} />
-                <pointLight position={[10, 10, 10]} intensity={1} />
-                <Environment preset="city" />
-             </Canvas>
-          </div>
-        </ErrorBoundary>
-      );
-    };
+COMPONENT STRUCTURE RULES:
+- Define your 3D scene component(s) that use useFrame, meshes, lights, etc.
+- The main App component should wrap everything in an ErrorBoundary and render the Canvas.
+- ALWAYS include OrbitControls for user interaction.
+- ALWAYS include basic lighting (ambientLight + pointLight or directionalLight).
+- End with: const root = createRoot(document.getElementById('root')); root.render(<App />);
 
-    const root = createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
-</body>
-</html>
+EXAMPLE STRUCTURE (for a rotating cube):
+// Scene component - contains 3D objects
+function RotatingCube() {
+  const meshRef = useRef();
+  useFrame((state, delta) => {
+    meshRef.current.rotation.x += delta;
+    meshRef.current.rotation.y += delta * 0.5;
+  });
+  return (
+    <mesh ref={meshRef}>
+      <boxGeometry args={[2, 2, 2]} />
+      <meshStandardMaterial color="hotpink" />
+    </mesh>
+  );
+}
+
+// App wrapper with Canvas
+const App = () => (
+  <div className="w-full h-full bg-black">
+    <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
+      <color attach="background" args={['#101010']} />
+      <Suspense fallback={null}>
+        <RotatingCube />
+        <Environment preset="city" />
+      </Suspense>
+      <OrbitControls makeDefault />
+      <ambientLight intensity={0.5} />
+      <pointLight position={[10, 10, 10]} intensity={1} />
+    </Canvas>
+  </div>
+);
+
+const root = createRoot(document.getElementById('root'));
+root.render(<App />);
 
 CAPABILITIES & FEATURES:
 - If the user asks for "physics", "gravity", "falling", "collisions", or "simulation":
